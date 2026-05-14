@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Life OS — あなたのゲーム人生を、1ページに。</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #0a0e14;
+    --bg-elevated: #11161f;
+    --bg-card: #161c27;
+    --bg-card-hover: #1c2330;
+    --border: #232b3a;
+    --border-bright: #2d3850;
+    --text-primary: #e6edf7;
+    --text-secondary: #8a96aa;
+    --text-muted: #5a6478;
+    --accent: #66c0f4;        /* Steam blue */
+    --accent-dim: #4a8fb8;
+    --accent-glow: rgba(102, 192, 244, 0.15);
+    --magenta: #ff5577;        /* 感情アクセント */
+    --gold: #f7c948;           /* ★ */
+    --green: #5ec07a;
+    --purple: #a78bfa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Noto Sans JP', system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* 背景に微かなノイズ + グロー */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(102, 192, 244, 0.08), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 100%, rgba(255, 85, 119, 0.06), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 32px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* === ヘッダー === */
+  header {
+    padding: 28px 0;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(10, 14, 20, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 10;
+  }
+
+  .header-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .logo {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-mark {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--magenta));
+    border-radius: 6px;
+    position: relative;
+  }
+  .logo-mark::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    background: var(--bg-base);
+    border-radius: 2px;
+  }
+
+  .nav {
+    display: flex;
+    gap: 28px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .nav a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s;
+    cursor: pointer;
+  }
+  .nav a:hover { color: var(--accent); }
+
+  /* === ヒーロー / プロフィールヘッダー === */
+  .hero {
+    padding: 72px 0 56px;
+    position: relative;
+  }
+
+  .hero-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .hero-tag::before {
+    content: "";
+    width: 24px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .profile-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 28px;
+    margin-bottom: 32px;
+  }
+
+  .avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #2c3e5c, #1a2538);
+    border: 2px solid var(--border-bright);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .profile-info h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    margin-bottom: 8px;
+  }
+  .profile-info h1 em {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .profile-meta {
+    display: flex;
+    gap: 18px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .profile-meta span { display: flex; align-items: center; gap: 6px; }
+  .profile-meta .dot { width: 4px; height: 4px; background: var(--text-muted); border-radius: 50%; }
+
+  /* === 統計カード === */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 64px;
+  }
+
+  .stat {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .stat:hover {
+    border-color: var(--border-bright);
+    transform: translateY(-2px);
+  }
+  .stat::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+  .stat:nth-child(2)::before { background: var(--magenta); }
+  .stat:nth-child(3)::before { background: var(--gold); }
+  .stat:nth-child(4)::before { background: var(--green); }
+
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .stat-unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-left: 4px;
+    font-weight: 400;
+  }
+
+  /* === セクション共通 === */
+  section { margin-bottom: 72px; scroll-margin-top: 100px; }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .section-title-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  /* === AI分析カード === */
+  .ai-profile {
+    background: linear-gradient(135deg, rgba(102, 192, 244, 0.04), rgba(255, 85, 119, 0.03));
+    border: 1px solid var(--border-bright);
+    border-radius: 16px;
+    padding: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-profile::before {
+    content: "AI";
+    position: absolute;
+    top: 24px;
+    right: 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--accent);
+    color: var(--bg-base);
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+
+  .ai-archetype {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .ai-headline {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(26px, 3.5vw, 38px);
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+    max-width: 720px;
+  }
+  .ai-headline em {
+    font-style: italic;
+    color: var(--magenta);
+  }
+
+  .ai-body {
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.8;
+    max-width: 680px;
+    margin-bottom: 24px;
+  }
+
+  .ai-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .ai-tag {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+  .ai-tag.strong {
+    background: rgba(102, 192, 244, 0.12);
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  /* === 入力フォーム === */
+  .form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .form-field { display: flex; flex-direction: column; gap: 6px; }
+  .form-field.full { grid-column: 1 / -1; }
+
+  .form-field label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+  }
+
+  input, textarea, select {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent-dim);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+
+  /* 星評価 */
+  .rating { display: flex; gap: 4px; }
+  .star {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 22px;
+    color: var(--border-bright);
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s, transform 0.15s;
+  }
+  .star:hover { transform: scale(1.15); }
+  .star.active { color: var(--gold); }
+
+  /* 感情タグ */
+  .emotion-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .emotion {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 6px 11px;
+    border-radius: 100px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .emotion:hover { border-color: var(--border-bright); color: var(--text-primary); }
+  .emotion.selected {
+    background: rgba(255, 85, 119, 0.12);
+    border-color: var(--magenta);
+    color: var(--magenta);
+  }
+
+  .submit-btn {
+    background: var(--accent);
+    color: var(--bg-base);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 8px;
+  }
+  .submit-btn:hover { background: #7ccef8; }
+  .submit-btn:active { transform: translateY(1px); }
+
+  /* === ライブラリ(ログ一覧) === */
+  .library {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .game-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s;
+    position: relative;
+    cursor: pointer;
+    animation: cardIn 0.4s ease-out backwards;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .game-card:hover {
+    border-color: var(--border-bright);
+    background: var(--bg-card-hover);
+    transform: translateY(-2px);
+  }
+
+  .game-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .game-title {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+  }
+
+  .game-rating {
+    color: var(--gold);
+    font-size: 13px;
+    flex-shrink: 0;
+    letter-spacing: 1px;
+  }
+
+  .game-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .game-meta .dot { width: 3px; height: 3px; background: currentColor; border-radius: 50%; }
+
+  .game-memo {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.65;
+    border-left: 2px solid var(--border-bright);
+    padding-left: 12px;
+    margin-bottom: 14px;
+    font-style: italic;
+  }
+
+  .game-emotions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .game-emotion {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--magenta);
+    background: rgba(255, 85, 119, 0.08);
+    padding: 2px 8px;
+    border-radius: 100px;
+  }
+
+  .game-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .delete-btn:hover { color: var(--magenta); background: rgba(255, 85, 119, 0.08); }
+
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  /* === Wrapped(年間振り返り) === */
+  .wrapped {
+    background: linear-gradient(135deg, #1a1233 0%, #0a0e14 50%, #1a0a1f 100%);
+    border: 1px solid var(--border-bright);
+    border-radius: 16px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .wrapped::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 60%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(167, 139, 250, 0.15), transparent 60%);
+    pointer-events: none;
+  }
+
+  .wrapped-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 32px;
+    position: relative;
+  }
+
+  .wrapped-year {
+    font-family: 'Fraunces', serif;
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, var(--accent), var(--purple), var(--magenta));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1;
+  }
+
+  .wrapped-subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-secondary);
+  }
+
+  .wrapped-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    position: relative;
+  }
+
+  .wrapped-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 24px;
+    backdrop-filter: blur(8px);
+  }
+
+  .wrapped-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .wrapped-value {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .wrapped-detail {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* === フッター === */
+  footer {
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 40px;
+  }
+
+  /* === レスポンシブ === */
+  @media (max-width: 768px) {
+    .container { padding: 0 20px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .form-row { grid-template-columns: 1fr; }
+    .wrapped-grid { grid-template-columns: 1fr; }
+    .wrapped { padding: 28px 24px; }
+    .wrapped-year { font-size: 44px; }
+    .profile-row { flex-direction: column; align-items: flex-start; }
+    .nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container header-inner">
+    <div class="logo">
+      <div class="logo-mark"></div>
+      <span>Game Life OS</span>
+    </div>
+    <nav class="nav">
+      <a onclick="document.getElementById('profile').scrollIntoView({behavior:'smooth'})">Profile</a>
+      <a onclick="document.getElementById('library').scrollIntoView({behavior:'smooth'})">Library</a>
+      <a onclick="document.getElementById('wrapped').scrollIntoView({behavior:'smooth'})">2026 Wrapped</a>
+      <a onclick="document.getElementById('add').scrollIntoView({behavior:'smooth'})">+ Add</a>
+    </nav>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ヒーロー / プロフィール -->
+  <section class="hero" id="profile">
+    <div class="hero-tag">Game Life Profile / gamelife.app/you</div>
+    <div class="profile-row">
+      <div class="avatar" id="avatar">Y</div>
+      <div class="profile-info">
+        <h1>あなたの<em>ゲーム人生</em>。</h1>
+        <div class="profile-meta">
+          <span>est. 2003</span>
+          <span class="dot"></span>
+          <span id="meta-total">0 titles logged</span>
+          <span class="dot"></span>
+          <span>JP / Player</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 統計 -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Total Titles</div>
+        <div class="stat-value" id="stat-titles">0<span class="stat-unit">games</span></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Hours Lived</div>
+        <div class="stat-value" id="stat-hours">0<span class="stat-unit">hrs</span></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Avg. Affection</div>
+        <div class="stat-value" id="stat-rating">—<span class="stat-unit">/ 5</span></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Top Emotion</div>
+        <div class="stat-value" id="stat-emotion" style="font-size:22px;">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI分析 -->
+  <section id="ai">
+    <div class="section-head">
+      <h2 class="section-title">AI Profile</h2>
+      <span class="section-title-mono">generated · 2026.05.15</span>
+    </div>
+    <div class="ai-profile">
+      <div class="ai-archetype" id="ai-archetype">— Archetype loading —</div>
+      <p class="ai-headline" id="ai-headline">
+        まだあなたのゲーム人生は<em>始まったばかり</em>。<br>
+        最初の1本を記録してみましょう。
+      </p>
+      <p class="ai-body" id="ai-body">
+        記録を3本以上追加すると、あなたのプレイ傾向を分析した
+        パーソナルプロフィールがここに表示されます。
+        どんなジャンルを好み、どんな感情を求めてゲームを選んでいるのか —
+        あなた自身も気づいていない「ゲーマーとしてのあなた」が浮かび上がります。
+      </p>
+      <div class="ai-tags" id="ai-tags">
+        <span class="ai-tag">awaiting data</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 新規追加フォーム -->
+  <section id="add">
+    <div class="section-head">
+      <h2 class="section-title">New Record</h2>
+      <span class="section-title-mono">log a memory</span>
+    </div>
+    <div class="form-card">
+      <div class="form-row">
+        <div class="form-field">
+          <label for="title">Title</label>
+          <input type="text" id="title" placeholder="例: Hollow Knight" autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label for="hours">Play Hours</label>
+          <input type="number" id="hours" placeholder="42" min="0" step="0.5">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label>Affection</label>
+          <div class="rating" id="rating">
+            <button type="button" class="star" data-value="1">★</button>
+            <button type="button" class="star" data-value="2">★</button>
+            <button type="button" class="star" data-value="3">★</button>
+            <button type="button" class="star" data-value="4">★</button>
+            <button type="button" class="star" data-value="5">★</button>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Played</label>
+          <input type="date" id="played-at">
+        </div>
+      </div>
+
+      <div class="form-field full" style="margin-bottom:16px;">
+        <label for="memo">Memory / What did you feel?</label>
+        <textarea id="memo" placeholder="このゲームで何を感じた? どんな思い出が残った?"></textarea>
+      </div>
+
+      <div class="form-field full" style="margin-bottom:16px;">
+        <label>Emotions</label>
+        <div class="emotion-picker" id="emotions">
+          <span class="emotion" data-emotion="nostalgic">懐かしい</span>
+          <span class="emotion" data-emotion="tense">緊張</span>
+          <span class="emotion" data-emotion="healing">癒し</span>
+          <span class="emotion" data-emotion="lonely">孤独</span>
+          <span class="emotion" data-emotion="exciting">熱中</span>
+          <span class="emotion" data-emotion="bittersweet">切ない</span>
+          <span class="emotion" data-emotion="cozy">穏やか</span>
+          <span class="emotion" data-emotion="awe">畏怖</span>
+          <span class="emotion" data-emotion="cathartic">解放</span>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submit">+ Record this life</button>
+    </div>
+  </section>
+
+  <!-- ライブラリ -->
+  <section id="library">
+    <div class="section-head">
+      <h2 class="section-title">Library</h2>
+      <span class="section-title-mono" id="library-count">0 records</span>
+    </div>
+    <div class="library" id="library-grid">
+      <div class="empty">No records yet. Add your first game above.</div>
+    </div>
+  </section>
+
+  <!-- Wrapped -->
+  <section id="wrapped">
+    <div class="section-head">
+      <h2 class="section-title">2026 Wrapped</h2>
+      <span class="section-title-mono">your year in games</span>
+    </div>
+    <div class="wrapped">
+      <div class="wrapped-header">
+        <div class="wrapped-year">2026</div>
+        <div class="wrapped-subtitle">a year you played through</div>
+      </div>
+      <div class="wrapped-grid">
+        <div class="wrapped-card">
+          <div class="wrapped-label">Most Played</div>
+          <div class="wrapped-value" id="wr-most">—</div>
+          <div class="wrapped-detail" id="wr-most-detail">No data yet</div>
+        </div>
+        <div class="wrapped-card">
+          <div class="wrapped-label">Most Loved</div>
+          <div class="wrapped-value" id="wr-loved">—</div>
+          <div class="wrapped-detail" id="wr-loved-detail">No data yet</div>
+        </div>
+        <div class="wrapped-card">
+          <div class="wrapped-label">Defining Emotion</div>
+          <div class="wrapped-value" id="wr-emotion">—</div>
+          <div class="wrapped-detail" id="wr-emotion-detail">記録が増えるほど明確に</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Game Life OS · prototype v0.1 · made for you
+</footer>
+
+<script>
+/* =========================================================
+   Game Life OS — Prototype Logic
+   - storage / render / main を1ファイル内で分離して書いている
+========================================================= */
+
+// ====== Storage Layer ======
+const STORAGE_KEY = 'gamelife.records.v1';
+
+function loadRecords() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error('Failed to load records:', e);
+    return [];
+  }
+}
+
+function saveRecords(records) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+// ====== State ======
+let state = {
+  records: loadRecords(),
+  rating: 0,
+  emotions: new Set(),
+};
+
+// ====== Form: rating ======
+const ratingEl = document.getElementById('rating');
+ratingEl.addEventListener('click', (e) => {
+  const star = e.target.closest('.star');
+  if (!star) return;
+  state.rating = parseInt(star.dataset.value, 10);
+  renderRating();
+});
+
+function renderRating() {
+  ratingEl.querySelectorAll('.star').forEach(s => {
+    s.classList.toggle('active', parseInt(s.dataset.value, 10) <= state.rating);
+  });
+}
+
+// ====== Form: emotions ======
+const emotionsEl = document.getElementById('emotions');
+emotionsEl.addEventListener('click', (e) => {
+  const el = e.target.closest('.emotion');
+  if (!el) return;
+  const key = el.dataset.emotion;
+  if (state.emotions.has(key)) {
+    state.emotions.delete(key);
+    el.classList.remove('selected');
+  } else {
+    state.emotions.add(key);
+    el.classList.add('selected');
+  }
+});
+
+// ====== Submit ======
+document.getElementById('submit').addEventListener('click', () => {
+  const title = document.getElementById('title').value.trim();
+  const hours = parseFloat(document.getElementById('hours').value) || 0;
+  const memo = document.getElementById('memo').value.trim();
+  const playedAt = document.getElementById('played-at').value || new Date().toISOString().slice(0, 10);
+
+  if (!title) {
+    alert('タイトルは必須です');
+    return;
+  }
+
+  const record = {
+    id: 'rec_' + Date.now(),
+    title,
+    playHours: hours,
+    rating: state.rating,
+    memo,
+    emotions: Array.from(state.emotions),
+    playedAt,
+    createdAt: new Date().toISOString(),
+  };
+
+  state.records.unshift(record);
+  saveRecords(state.records);
+  resetForm();
+  render();
+});
+
+function resetForm() {
+  document.getElementById('title').value = '';
+  document.getElementById('hours').value = '';
+  document.getElementById('memo').value = '';
+  document.getElementById('played-at').value = '';
+  state.rating = 0;
+  state.emotions.clear();
+  renderRating();
+  emotionsEl.querySelectorAll('.emotion').forEach(e => e.classList.remove('selected'));
+}
+
+// ====== Delete ======
+function deleteRecord(id) {
+  if (!confirm('この記録を削除しますか?')) return;
+  state.records = state.records.filter(r => r.id !== id);
+  saveRecords(state.records);
+  render();
+}
+window.deleteRecord = deleteRecord;
+
+// ====== Render ======
+const EMOTION_LABEL = {
+  nostalgic: '懐かしい', tense: '緊張', healing: '癒し',
+  lonely: '孤独', exciting: '熱中', bittersweet: '切ない',
+  cozy: '穏やか', awe: '畏怖', cathartic: '解放',
+};
+
+function render() {
+  renderStats();
+  renderLibrary();
+  renderAIProfile();
+  renderWrapped();
+}
+
+function renderStats() {
+  const r = state.records;
+  document.getElementById('stat-titles').innerHTML =
+    `${r.length}<span class="stat-unit">games</span>`;
+  const totalHours = r.reduce((sum, x) => sum + (x.playHours || 0), 0);
+  document.getElementById('stat-hours').innerHTML =
+    `${totalHours.toFixed(totalHours % 1 === 0 ? 0 : 1)}<span class="stat-unit">hrs</span>`;
+  const rated = r.filter(x => x.rating > 0);
+  const avg = rated.length ? (rated.reduce((s, x) => s + x.rating, 0) / rated.length) : null;
+  document.getElementById('stat-rating').innerHTML =
+    avg ? `${avg.toFixed(1)}<span class="stat-unit">/ 5</span>` : `—<span class="stat-unit">/ 5</span>`;
+
+  // top emotion
+  const counts = {};
+  r.forEach(rec => (rec.emotions || []).forEach(e => counts[e] = (counts[e] || 0) + 1));
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById('stat-emotion').textContent = top ? EMOTION_LABEL[top[0]] : '—';
+
+  document.getElementById('meta-total').textContent =
+    `${r.length} title${r.length === 1 ? '' : 's'} logged`;
+}
+
+function renderLibrary() {
+  const grid = document.getElementById('library-grid');
+  document.getElementById('library-count').textContent =
+    `${state.records.length} record${state.records.length === 1 ? '' : 's'}`;
+
+  if (state.records.length === 0) {
+    grid.innerHTML = '<div class="empty">No records yet. Add your first game above.</div>';
+    return;
+  }
+
+  grid.innerHTML = state.records.map((r, i) => `
+    <article class="game-card" style="animation-delay:${i * 0.04}s">
+      <div class="game-card-head">
+        <h3 class="game-title">${escapeHtml(r.title)}</h3>
+        <div class="game-rating">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
+      </div>
+      <div class="game-meta">
+        <span>${r.playHours || 0} hrs</span>
+        <span class="dot"></span>
+        <span>${r.playedAt || '—'}</span>
+      </div>
+      ${r.memo ? `<p class="game-memo">${escapeHtml(r.memo)}</p>` : ''}
+      ${(r.emotions && r.emotions.length) ? `
+        <div class="game-emotions">
+          ${r.emotions.map(e => `<span class="game-emotion">${EMOTION_LABEL[e] || e}</span>`).join('')}
+        </div>
+      ` : ''}
+      <div class="game-actions">
+        <button class="delete-btn" onclick="deleteRecord('${r.id}')">Delete</button>
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderAIProfile() {
+  const r = state.records;
+  const archetypeEl = document.getElementById('ai-archetype');
+  const headlineEl = document.getElementById('ai-headline');
+  const bodyEl = document.getElementById('ai-body');
+  const tagsEl = document.getElementById('ai-tags');
+
+  if (r.length < 3) {
+    archetypeEl.textContent = '— Archetype loading —';
+    headlineEl.innerHTML = `
+      まだあなたのゲーム人生は<em>始まったばかり</em>。<br>
+      最初の数本を記録してみましょう。
+    `;
+    bodyEl.textContent = '記録を3本以上追加すると、あなたのプレイ傾向を分析したパーソナルプロフィールがここに表示されます。';
+    tagsEl.innerHTML = `<span class="ai-tag">${r.length} / 3 records</span>`;
+    return;
+  }
+
+  // === ダミーのAI分析ロジック(ヒューリスティック) ===
+  const totalHours = r.reduce((s, x) => s + (x.playHours || 0), 0);
+  const avgHours = totalHours / r.length;
+  const ratedAvg = r.filter(x => x.rating > 0).reduce((s, x) => s + x.rating, 0) /
+                   Math.max(1, r.filter(x => x.rating > 0).length);
+
+  // 感情カウント
+  const eCounts = {};
+  r.forEach(rec => (rec.emotions || []).forEach(e => eCounts[e] = (eCounts[e] || 0) + 1));
+  const sortedEmotions = Object.entries(eCounts).sort((a, b) => b[1] - a[1]);
+  const topEmotion = sortedEmotions[0] ? sortedEmotions[0][0] : null;
+
+  // アーキタイプ判定(超単純な分岐)
+  let archetype, headline, body;
+  if (avgHours > 50) {
+    archetype = 'The Deep Diver / 深淵潜行型';
+    headline = `あなたは<em>長く、深く</em>遊ぶタイプ。<br>1本のゲームに人生を預ける人。`;
+    body = `平均プレイ時間は${avgHours.toFixed(0)}時間。あなたは少数の作品を選び、その世界に深く沈み込むタイプのゲーマーです。広く浅くではなく、狭く深く — 一度心を掴まれた世界には、何度でも戻ってくる。`;
+  } else if (topEmotion === 'lonely' || topEmotion === 'bittersweet') {
+    archetype = 'The Melancholic / 余韻探求型';
+    headline = `あなたは<em>切なさ</em>を求めて<br>ゲームを選んでいる。`;
+    body = `記録の中で最も多い感情は「${EMOTION_LABEL[topEmotion]}」。あなたが愛するのは、エンディング後にしばらく動けなくなるような作品。物語の余韻、世界の静けさ、孤独の手触り — そういうものに価値を見出す稀有なプレイヤーです。`;
+  } else if (topEmotion === 'exciting' || topEmotion === 'tense') {
+    archetype = 'The Adrenaline Seeker / 鼓動追求型';
+    headline = `あなたは<em>心拍数</em>でゲームを<br>選ぶタイプ。`;
+    body = `「${EMOTION_LABEL[topEmotion]}」を最も多く記録しています。あなたが求めるのは、コントローラーを握る手が汗ばむような瞬間。安全な物語より、危うい刺激。プレイ後に「生きてる」と感じられる作品を選び続ける人です。`;
+  } else if (ratedAvg >= 4.5) {
+    archetype = 'The Curator / 厳選収集型';
+    headline = `あなたは<em>選び抜く</em>人。<br>外さないゲーマー。`;
+    body = `平均評価${ratedAvg.toFixed(1)}/5。あなたのライブラリには「ハズレ」がほとんど存在しない。手を出す前に十分に吟味し、自分の好みを正確に把握している。ゲームを"消費する"のではなく、"選び取る"プレイヤーです。`;
+  } else {
+    archetype = 'The Wanderer / 漂流型';
+    headline = `あなたは<em>幅広く</em>遊ぶ、<br>好奇心のゲーマー。`;
+    body = `ジャンルにも感情にも偏りすぎず、様々な作品を渡り歩くタイプ。ゲームを「ひとつの世界」として捉え、新しい風景を見ることそのものを楽しんでいる。固定観念に縛られない柔軟なプレイヤーです。`;
+  }
+
+  archetypeEl.textContent = archetype;
+  headlineEl.innerHTML = headline;
+  bodyEl.textContent = body;
+
+  // タグ生成
+  const tags = [];
+  if (totalHours > 100) tags.push({ label: `${totalHours.toFixed(0)}h played`, strong: true });
+  if (ratedAvg >= 4) tags.push({ label: `picky taste (${ratedAvg.toFixed(1)}/5)`, strong: true });
+  sortedEmotions.slice(0, 3).forEach(([e, c]) => tags.push({ label: `${EMOTION_LABEL[e]} ×${c}`, strong: false }));
+  tags.push({ label: `${r.length} titles logged`, strong: false });
+
+  tagsEl.innerHTML = tags.map(t =>
+    `<span class="ai-tag${t.strong ? ' strong' : ''}">${t.label}</span>`
+  ).join('');
+}
+
+function renderWrapped() {
+  const r = state.records;
+  if (r.length === 0) {
+    document.getElementById('wr-most').textContent = '—';
+    document.getElementById('wr-most-detail').textContent = 'No data yet';
+    document.getElementById('wr-loved').textContent = '—';
+    document.getElementById('wr-loved-detail').textContent = 'No data yet';
+    document.getElementById('wr-emotion').textContent = '—';
+    document.getElementById('wr-emotion-detail').textContent = '記録が増えるほど明確に';
+    return;
+  }
+
+  // Most played
+  const mostPlayed = [...r].sort((a, b) => (b.playHours || 0) - (a.playHours || 0))[0];
+  document.getElementById('wr-most').textContent = mostPlayed.title;
+  document.getElementById('wr-most-detail').textContent = `${mostPlayed.playHours || 0} hours of your year`;
+
+  // Most loved
+  const mostLoved = [...r].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
+  document.getElementById('wr-loved').textContent = mostLoved.title;
+  document.getElementById('wr-loved-detail').textContent = `★ ${mostLoved.rating || 0} / 5 · the one that stayed`;
+
+  // Defining emotion
+  const counts = {};
+  r.forEach(rec => (rec.emotions || []).forEach(e => counts[e] = (counts[e] || 0) + 1));
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  if (top) {
+    document.getElementById('wr-emotion').textContent = EMOTION_LABEL[top[0]];
+    document.getElementById('wr-emotion-detail').textContent = `${top[1]} 件の記録に刻まれた感情`;
+  } else {
+    document.getElementById('wr-emotion').textContent = '—';
+    document.getElementById('wr-emotion-detail').textContent = '感情タグを記録してみよう';
+  }
+}
+
+// ====== Utils ======
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// ====== Demo Seed (初回起動時のみ) ======
+function seedDemoData() {
+  if (state.records.length > 0) return;
+  const demo = [
+    {
+      id: 'rec_demo_1', title: 'Hollow Knight', playHours: 58, rating: 5,
+      memo: '孤独だけど、温かい場所だった。Hallownest を歩いた数十時間は、現実の何かを置いてきた感じがする。',
+      emotions: ['lonely', 'bittersweet', 'awe'],
+      playedAt: '2026-02-14', createdAt: '2026-02-14T10:00:00Z'
+    },
+    {
+      id: 'rec_demo_2', title: 'Outer Wilds', playHours: 22, rating: 5,
+      memo: 'もう一度初見でプレイしたい、人生で唯一の作品。',
+      emotions: ['awe', 'bittersweet', 'cathartic'],
+      playedAt: '2026-03-22', createdAt: '2026-03-22T10:00:00Z'
+    },
+    {
+      id: 'rec_demo_3', title: 'Stardew Valley', playHours: 130, rating: 4,
+      memo: '深夜に作物を植えていた冬。何もしたくなかったあの時期、ここだけは平和だった。',
+      emotions: ['cozy', 'healing', 'nostalgic'],
+      playedAt: '2026-01-08', createdAt: '2026-01-08T10:00:00Z'
+    },
+    {
+      id: 'rec_demo_4', title: 'ELDEN RING', playHours: 84, rating: 5,
+      memo: 'マレニアに30回死んだ。倒したときの叫び声、隣の部屋まで聞こえたらしい。',
+      emotions: ['tense', 'exciting', 'cathartic'],
+      playedAt: '2026-04-02', createdAt: '2026-04-02T10:00:00Z'
+    },
+  ];
+  state.records = demo;
+  saveRecords(state.records);
+}
+
+// ====== Init ======
+// 初回のみデモデータを入れる(空の画面より完成イメージが伝わりやすいため)
+if (!localStorage.getItem(STORAGE_KEY + '.seeded')) {
+  seedDemoData();
+  localStorage.setItem(STORAGE_KEY + '.seeded', '1');
+}
+render();
+</script>
+
+</body>
+</html>
