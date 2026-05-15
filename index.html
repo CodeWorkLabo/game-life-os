@@ -159,11 +159,14 @@
     margin-bottom: 32px;
   }
 
+  /* === アバター === */
   .avatar {
     width: 96px;
     height: 96px;
     border-radius: 12px;
     background: linear-gradient(135deg, #2c3e5c, #1a2538);
+    background-size: cover;
+    background-position: center;
     border: 2px solid var(--border-bright);
     display: flex;
     align-items: center;
@@ -173,7 +176,61 @@
     font-weight: 800;
     color: var(--accent);
     flex-shrink: 0;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
   }
+
+  /* 画像なし時のプレースホルダー文字 */
+  .avatar-letter {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .avatar.has-image .avatar-letter { display: none; }
+
+  /* ホバーで「Change Photo」オーバーレイ */
+  .avatar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 14, 20, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 2;
+  }
+  .avatar:hover .avatar-overlay { opacity: 1; }
+
+  /* 右上の削除ボタン(×) — 画像があるときのみ表示 */
+  .avatar-delete {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    background: var(--magenta);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 11px;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    transition: transform 0.15s, background 0.15s;
+  }
+  .avatar-delete:hover { transform: scale(1.2); background: #ff2244; }
+  .avatar.has-image .avatar-delete { display: flex; }
 
   .profile-info h1 {
     font-family: 'Fraunces', serif;
@@ -713,7 +770,13 @@
   <section class="hero" id="profile">
     <div class="hero-tag">Game Life Profile / gamelife.app/you</div>
     <div class="profile-row">
-      <div class="avatar" id="avatar">Y</div>
+      <!-- アバター: クリックで画像選択、右上×で削除、ホバーで Change Photo -->
+      <div class="avatar" id="avatar">
+        <span class="avatar-letter">G</span>
+        <div class="avatar-overlay">Change Photo</div>
+        <button class="avatar-delete" id="avatar-delete" title="画像を削除">×</button>
+      </div>
+      <input type="file" accept="image/*" id="avatar-upload" style="display:none">
       <div class="profile-info">
         <h1>あなたの<em>ゲーム人生</em>。</h1>
         <div class="profile-meta">
@@ -884,7 +947,7 @@
    - storage / render / main を1ファイル内で分離して書いている
 ========================================================= */
 
-// ====== Storage Layer ======
+// ====== Storage Layer (records) ======
 const STORAGE_KEY = 'gamelife.records.v1';
 
 function loadRecords() {
@@ -901,9 +964,26 @@ function saveRecords(records) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
 }
 
+// ====== Storage Layer (profile) ======
+const PROFILE_KEY = 'gamelife.profile.v1';
+
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveProfile(profile) {
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+}
+
 // ====== State ======
 let state = {
   records: loadRecords(),
+  profile: loadProfile(),
   rating: 0,
   emotions: new Set(),
 };
@@ -936,6 +1016,46 @@ emotionsEl.addEventListener('click', (e) => {
     state.emotions.add(key);
     el.classList.add('selected');
   }
+});
+
+// ====== Avatar upload ======
+document.getElementById('avatar').addEventListener('click', (e) => {
+  // 削除ボタンのクリックはファイル選択を開かない
+  if (e.target.closest('#avatar-delete')) return;
+  document.getElementById('avatar-upload').click();
+});
+
+document.getElementById('avatar-upload').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      // 256×256 に中央クロップしてリサイズ
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      const size = Math.min(img.width, img.height);
+      const sx = (img.width - size) / 2;
+      const sy = (img.height - size) / 2;
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, 256, 256);
+      state.profile.avatarDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      saveProfile(state.profile);
+      renderAvatar();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = ''; // 同じファイルを再選択できるようにリセット
+});
+
+document.getElementById('avatar-delete').addEventListener('click', (e) => {
+  e.stopPropagation(); // avatar の click → ファイル選択が開くのを防ぐ
+  state.profile.avatarDataUrl = null;
+  saveProfile(state.profile);
+  renderAvatar();
 });
 
 // ====== Submit ======
@@ -999,6 +1119,18 @@ function render() {
   renderLibrary();
   renderAIProfile();
   renderWrapped();
+  renderAvatar();
+}
+
+function renderAvatar() {
+  const avatarEl = document.getElementById('avatar');
+  if (state.profile.avatarDataUrl) {
+    avatarEl.style.backgroundImage = `url(${state.profile.avatarDataUrl})`;
+    avatarEl.classList.add('has-image');
+  } else {
+    avatarEl.style.backgroundImage = '';
+    avatarEl.classList.remove('has-image');
+  }
 }
 
 function renderStats() {
