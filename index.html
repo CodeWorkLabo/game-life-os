@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Game Life OS — あなたのゲーム人生を、1ページに。</title>
+<title>Freakdex — Your gamer self, indexed.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -242,7 +242,7 @@
   }
   .profile-info h1 em {
     font-style: italic;
-    color: var(--accent);
+    color: var(--magenta);
     font-weight: 600;
   }
 
@@ -753,12 +753,12 @@
   <div class="container header-inner">
     <div class="logo">
       <div class="logo-mark"></div>
-      <span>Game Life OS</span>
+      <span>Freakdex</span>
     </div>
     <nav class="nav">
       <a onclick="document.getElementById('profile').scrollIntoView({behavior:'smooth'})">Profile</a>
-      <a onclick="document.getElementById('library').scrollIntoView({behavior:'smooth'})">Library</a>
-      <a onclick="document.getElementById('wrapped').scrollIntoView({behavior:'smooth'})">2026 Wrapped</a>
+      <a onclick="document.getElementById('library').scrollIntoView({behavior:'smooth'})">Played</a>
+      <a onclick="document.getElementById('wrapped').scrollIntoView({behavior:'smooth'})">2026 Recap</a>
       <a onclick="document.getElementById('add').scrollIntoView({behavior:'smooth'})">+ Add</a>
     </nav>
   </div>
@@ -768,7 +768,7 @@
 
   <!-- ヒーロー / プロフィール -->
   <section class="hero" id="profile">
-    <div class="hero-tag">Game Life Profile / gamelife.app/you</div>
+    <div class="hero-tag">Player Card / freakdex.app/you</div>
     <div class="profile-row">
       <!-- アバター: クリックで画像選択、右上×で削除、ホバーで Change Photo -->
       <div class="avatar" id="avatar">
@@ -778,7 +778,7 @@
       </div>
       <input type="file" accept="image/*" id="avatar-upload" style="display:none">
       <div class="profile-info">
-        <h1>あなたの<em>ゲーム人生</em>。</h1>
+        <h1>あなたの<em>ゲーマー像</em>。</h1>
         <div class="profile-meta">
           <span>est. 2003</span>
           <span class="dot"></span>
@@ -813,7 +813,7 @@
   <!-- AI分析 -->
   <section id="ai">
     <div class="section-head">
-      <h2 class="section-title">AI Profile</h2>
+      <h2 class="section-title">Archetype</h2>
       <span class="section-title-mono">generated · 2026.05.15</span>
     </div>
     <div class="ai-profile">
@@ -837,7 +837,7 @@
   <!-- 新規追加フォーム -->
   <section id="add">
     <div class="section-head">
-      <h2 class="section-title">New Record</h2>
+      <h2 class="section-title">+ Log</h2>
       <span class="section-title-mono">log a memory</span>
     </div>
     <div class="form-card">
@@ -896,7 +896,7 @@
   <!-- ライブラリ -->
   <section id="library">
     <div class="section-head">
-      <h2 class="section-title">Library</h2>
+      <h2 class="section-title">Played</h2>
       <span class="section-title-mono" id="library-count">0 records</span>
     </div>
     <div class="library" id="library-grid">
@@ -907,7 +907,7 @@
   <!-- Wrapped -->
   <section id="wrapped">
     <div class="section-head">
-      <h2 class="section-title">2026 Wrapped</h2>
+      <h2 class="section-title">2026 Recap</h2>
       <span class="section-title-mono">your year in games</span>
     </div>
     <div class="wrapped">
@@ -938,12 +938,12 @@
 </div>
 
 <footer>
-  Game Life OS · prototype v0.1 · made for you
+  Freakdex · prototype v0.2 · made for you
 </footer>
 
 <script>
 /* =========================================================
-   Game Life OS — Prototype Logic
+   Freakdex — Prototype Logic
    - storage / render / main を1ファイル内で分離して書いている
 ========================================================= */
 
