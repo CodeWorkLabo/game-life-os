@@ -289,7 +289,7 @@
   }
   .stat:nth-child(2)::before { background: var(--magenta); }
   .stat:nth-child(3)::before { background: var(--gold); }
-  .stat:nth-child(4)::before { background: var(--green); }
+  .stat:nth-child(4)::before { background: var(--purple); }
 
   .stat-label {
     font-family: 'JetBrains Mono', monospace;
@@ -804,8 +804,8 @@
         <div class="stat-value" id="stat-rating">—<span class="stat-unit">/ 5</span></div>
       </div>
       <div class="stat">
-        <div class="stat-label">Top Emotion</div>
-        <div class="stat-value" id="stat-emotion" style="font-size:22px;">—</div>
+        <div class="stat-label">Archetype</div>
+        <div class="stat-value" id="stat-emotion" style="font-size:18px;">—</div>
       </div>
     </div>
   </section>
@@ -1137,6 +1137,54 @@ function renderAvatar() {
   }
 }
 
+// ====== アーキタイプ判定(共通) ======
+// renderStats と renderAIProfile の両方から呼ばれる。3本未満は null を返す。
+function calcArchetype(records) {
+  if (records.length < 3) return null;
+
+  const totalHours = records.reduce((s, x) => s + (x.playHours || 0), 0);
+  const avgHours = totalHours / records.length;
+  const ratedList = records.filter(x => x.rating > 0);
+  const ratedAvg = ratedList.length
+    ? ratedList.reduce((s, x) => s + x.rating, 0) / ratedList.length
+    : 0;
+
+  const eCounts = {};
+  records.forEach(rec => (rec.emotions || []).forEach(e => eCounts[e] = (eCounts[e] || 0) + 1));
+  const sortedEmotions = Object.entries(eCounts).sort((a, b) => b[1] - a[1]);
+  const topEmotion = sortedEmotions[0] ? sortedEmotions[0][0] : null;
+
+  let nameEn, nameFull, headline, body;
+  if (avgHours > 50) {
+    nameEn = 'The Deep Diver';
+    nameFull = 'The Deep Diver / 深淵潜行型';
+    headline = `あなたは<em>長く、深く</em>遊ぶタイプ。<br>1本のゲームに人生を預ける人。`;
+    body = `平均プレイ時間は${avgHours.toFixed(0)}時間。あなたは少数の作品を選び、その世界に深く沈み込むタイプのゲーマーです。広く浅くではなく、狭く深く — 一度心を掴まれた世界には、何度でも戻ってくる。`;
+  } else if (topEmotion === 'lonely' || topEmotion === 'bittersweet') {
+    nameEn = 'The Melancholic';
+    nameFull = 'The Melancholic / 余韻探求型';
+    headline = `あなたは<em>切なさ</em>を求めて<br>ゲームを選んでいる。`;
+    body = `記録の中で最も多い感情は「${EMOTION_LABEL[topEmotion]}」。あなたが愛するのは、エンディング後にしばらく動けなくなるような作品。物語の余韻、世界の静けさ、孤独の手触り — そういうものに価値を見出す稀有なプレイヤーです。`;
+  } else if (topEmotion === 'exciting' || topEmotion === 'tense') {
+    nameEn = 'The Adrenaline Seeker';
+    nameFull = 'The Adrenaline Seeker / 鼓動追求型';
+    headline = `あなたは<em>心拍数</em>でゲームを<br>選ぶタイプ。`;
+    body = `「${EMOTION_LABEL[topEmotion]}」を最も多く記録しています。あなたが求めるのは、コントローラーを握る手が汗ばむような瞬間。安全な物語より、危うい刺激。プレイ後に「生きてる」と感じられる作品を選び続ける人です。`;
+  } else if (ratedAvg >= 4.5) {
+    nameEn = 'The Curator';
+    nameFull = 'The Curator / 厳選収集型';
+    headline = `あなたは<em>選び抜く</em>人。<br>外さないゲーマー。`;
+    body = `平均評価${ratedAvg.toFixed(1)}/5。あなたのライブラリには「ハズレ」がほとんど存在しない。手を出す前に十分に吟味し、自分の好みを正確に把握している。ゲームを"消費する"のではなく、"選び取る"プレイヤーです。`;
+  } else {
+    nameEn = 'The Wanderer';
+    nameFull = 'The Wanderer / 漂流型';
+    headline = `あなたは<em>幅広く</em>遊ぶ、<br>好奇心のゲーマー。`;
+    body = `ジャンルにも感情にも偏りすぎず、様々な作品を渡り歩くタイプ。ゲームを「ひとつの世界」として捉え、新しい風景を見ることそのものを楽しんでいる。固定観念に縛られない柔軟なプレイヤーです。`;
+  }
+
+  return { nameEn, nameFull, headline, body, sortedEmotions, totalHours, ratedAvg };
+}
+
 function renderStats() {
   const r = state.records;
   document.getElementById('stat-titles').innerHTML =
@@ -1149,11 +1197,9 @@ function renderStats() {
   document.getElementById('stat-rating').innerHTML =
     avg ? `${avg.toFixed(1)}<span class="stat-unit">/ 5</span>` : `—<span class="stat-unit">/ 5</span>`;
 
-  // top emotion
-  const counts = {};
-  r.forEach(rec => (rec.emotions || []).forEach(e => counts[e] = (counts[e] || 0) + 1));
-  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-  document.getElementById('stat-emotion').textContent = top ? EMOTION_LABEL[top[0]] : '—';
+  // 4枚目カード: アーキタイプ英語名を表示
+  const archetypeResult = calcArchetype(r);
+  document.getElementById('stat-emotion').textContent = archetypeResult ? archetypeResult.nameEn : '—';
 
   document.getElementById('meta-total').textContent =
     `${r.length} title${r.length === 1 ? '' : 's'} logged`;
@@ -1200,10 +1246,11 @@ function renderAIProfile() {
   const bodyEl = document.getElementById('ai-body');
   const tagsEl = document.getElementById('ai-tags');
 
-  if (r.length < 3) {
+  const result = calcArchetype(r);
+  if (!result) {
     archetypeEl.textContent = '— Archetype loading —';
     headlineEl.innerHTML = `
-      まだあなたのゲーム人生は<em>始まったばかり</em>。<br>
+      まだあなたのゲーマー像は<em>始まったばかり</em>。<br>
       最初の数本を記録してみましょう。
     `;
     bodyEl.textContent = '記録を3本以上追加すると、あなたのプレイ傾向を分析したパーソナルプロフィールがここに表示されます。';
@@ -1211,51 +1258,15 @@ function renderAIProfile() {
     return;
   }
 
-  // === ダミーのAI分析ロジック(ヒューリスティック) ===
-  const totalHours = r.reduce((s, x) => s + (x.playHours || 0), 0);
-  const avgHours = totalHours / r.length;
-  const ratedAvg = r.filter(x => x.rating > 0).reduce((s, x) => s + x.rating, 0) /
-                   Math.max(1, r.filter(x => x.rating > 0).length);
-
-  // 感情カウント
-  const eCounts = {};
-  r.forEach(rec => (rec.emotions || []).forEach(e => eCounts[e] = (eCounts[e] || 0) + 1));
-  const sortedEmotions = Object.entries(eCounts).sort((a, b) => b[1] - a[1]);
-  const topEmotion = sortedEmotions[0] ? sortedEmotions[0][0] : null;
-
-  // アーキタイプ判定(超単純な分岐)
-  let archetype, headline, body;
-  if (avgHours > 50) {
-    archetype = 'The Deep Diver / 深淵潜行型';
-    headline = `あなたは<em>長く、深く</em>遊ぶタイプ。<br>1本のゲームに人生を預ける人。`;
-    body = `平均プレイ時間は${avgHours.toFixed(0)}時間。あなたは少数の作品を選び、その世界に深く沈み込むタイプのゲーマーです。広く浅くではなく、狭く深く — 一度心を掴まれた世界には、何度でも戻ってくる。`;
-  } else if (topEmotion === 'lonely' || topEmotion === 'bittersweet') {
-    archetype = 'The Melancholic / 余韻探求型';
-    headline = `あなたは<em>切なさ</em>を求めて<br>ゲームを選んでいる。`;
-    body = `記録の中で最も多い感情は「${EMOTION_LABEL[topEmotion]}」。あなたが愛するのは、エンディング後にしばらく動けなくなるような作品。物語の余韻、世界の静けさ、孤独の手触り — そういうものに価値を見出す稀有なプレイヤーです。`;
-  } else if (topEmotion === 'exciting' || topEmotion === 'tense') {
-    archetype = 'The Adrenaline Seeker / 鼓動追求型';
-    headline = `あなたは<em>心拍数</em>でゲームを<br>選ぶタイプ。`;
-    body = `「${EMOTION_LABEL[topEmotion]}」を最も多く記録しています。あなたが求めるのは、コントローラーを握る手が汗ばむような瞬間。安全な物語より、危うい刺激。プレイ後に「生きてる」と感じられる作品を選び続ける人です。`;
-  } else if (ratedAvg >= 4.5) {
-    archetype = 'The Curator / 厳選収集型';
-    headline = `あなたは<em>選び抜く</em>人。<br>外さないゲーマー。`;
-    body = `平均評価${ratedAvg.toFixed(1)}/5。あなたのライブラリには「ハズレ」がほとんど存在しない。手を出す前に十分に吟味し、自分の好みを正確に把握している。ゲームを"消費する"のではなく、"選び取る"プレイヤーです。`;
-  } else {
-    archetype = 'The Wanderer / 漂流型';
-    headline = `あなたは<em>幅広く</em>遊ぶ、<br>好奇心のゲーマー。`;
-    body = `ジャンルにも感情にも偏りすぎず、様々な作品を渡り歩くタイプ。ゲームを「ひとつの世界」として捉え、新しい風景を見ることそのものを楽しんでいる。固定観念に縛られない柔軟なプレイヤーです。`;
-  }
-
-  archetypeEl.textContent = archetype;
-  headlineEl.innerHTML = headline;
-  bodyEl.textContent = body;
+  archetypeEl.textContent = result.nameFull;
+  headlineEl.innerHTML = result.headline;
+  bodyEl.textContent = result.body;
 
   // タグ生成
   const tags = [];
-  if (totalHours > 100) tags.push({ label: `${totalHours.toFixed(0)}h played`, strong: true });
-  if (ratedAvg >= 4) tags.push({ label: `picky taste (${ratedAvg.toFixed(1)}/5)`, strong: true });
-  sortedEmotions.slice(0, 3).forEach(([e, c]) => tags.push({ label: `${EMOTION_LABEL[e]} ×${c}`, strong: false }));
+  if (result.totalHours > 100) tags.push({ label: `${result.totalHours.toFixed(0)}h played`, strong: true });
+  if (result.ratedAvg >= 4) tags.push({ label: `picky taste (${result.ratedAvg.toFixed(1)}/5)`, strong: true });
+  result.sortedEmotions.slice(0, 3).forEach(([e, c]) => tags.push({ label: `${EMOTION_LABEL[e]} ×${c}`, strong: false }));
   tags.push({ label: `${r.length} titles logged`, strong: false });
 
   tagsEl.innerHTML = tags.map(t =>
